@@ -1,6 +1,6 @@
 <?php
 
-namespace ethaniccc\ViaVersion\hacks\v428;
+namespace ethaniccc\ViaVersion\protocol\v428;
 
 use pocketmine\nbt\NetworkLittleEndianNBTStream;
 use pocketmine\network\mcpe\protocol\StartGamePacket;
@@ -9,10 +9,12 @@ use pocketmine\network\mcpe\protocol\types\Experiments;
 use pocketmine\network\mcpe\protocol\types\ItemTypeEntry;
 use pocketmine\network\mcpe\protocol\types\SpawnSettings;
 
-class StartGamePacket428 extends StartGamePacket{
+class StartGamePacket428 extends StartGamePacket
+{
 
-    public static function from(StartGamePacket $packet) : StartGamePacket428{
-        $s = new StartGamePacket428();
+    public static function from(StartGamePacket $packet): StartGamePacket428
+    {
+        $s = new self();
         $s->entityRuntimeId = $packet->entityRuntimeId;
         $s->entityUniqueId = $packet->entityUniqueId;
         $s->playerGamemode = $packet->playerGamemode;
@@ -70,14 +72,15 @@ class StartGamePacket428 extends StartGamePacket{
         $s->blockPalette = $packet->blockPalette;
         $s->itemTable = $packet->itemTable;
         $s->enableNewInventorySystem = $packet->enableNewInventorySystem;
-        // please fucking end my suffering
+
         return $s;
     }
 
-    public $rewindHistorySize = 0;
-    public $isServerAuthoritativeBlockBreaking = false;
+    public int $rewindHistorySize = 0;
+    public bool $isServerAuthoritativeBlockBreaking = false;
 
-    protected function decodePayload(){
+    protected function decodePayload()
+    {
         $this->entityUniqueId = $this->getEntityUniqueId();
         $this->entityRuntimeId = $this->getEntityRuntimeId();
         $this->playerGamemode = $this->getVarInt();
@@ -125,9 +128,9 @@ class StartGamePacket428 extends StartGamePacket{
         $this->limitedWorldWidth = $this->getLInt();
         $this->limitedWorldLength = $this->getLInt();
         $this->isNewNether = $this->getBool();
-        if($this->getBool()){
+        if ($this->getBool()) {
             $this->experimentalGameplayOverride = $this->getBool();
-        }else{
+        } else {
             $this->experimentalGameplayOverride = null;
         }
 
@@ -143,14 +146,14 @@ class StartGamePacket428 extends StartGamePacket{
         $this->enchantmentSeed = $this->getVarInt();
 
         $this->blockPalette = [];
-        for($i = 0, $len = $this->getUnsignedVarInt(); $i < $len; ++$i){
+        for ($i = 0, $len = $this->getUnsignedVarInt(); $i < $len; ++$i) {
             $blockName = $this->getString();
             $state = $this->getNbtCompoundRoot();
             $this->blockPalette[] = new BlockPaletteEntry($blockName, $state);
         }
 
         $this->itemTable = [];
-        for($i = 0, $count = $this->getUnsignedVarInt(); $i < $count; ++$i){
+        for ($i = 0, $count = $this->getUnsignedVarInt(); $i < $count; ++$i) {
             $stringId = $this->getString();
             $numericId = $this->getSignedLShort();
             $isComponentBased = $this->getBool();
@@ -162,7 +165,8 @@ class StartGamePacket428 extends StartGamePacket{
         $this->enableNewInventorySystem = $this->getBool();
     }
 
-    protected function encodePayload(){
+    protected function encodePayload()
+    {
         $this->putEntityUniqueId($this->entityUniqueId);
         $this->putEntityRuntimeId($this->entityRuntimeId);
         $this->putVarInt($this->playerGamemode);
@@ -211,7 +215,7 @@ class StartGamePacket428 extends StartGamePacket{
         $this->putLInt($this->limitedWorldLength);
         $this->putBool($this->isNewNether);
         $this->putBool($this->experimentalGameplayOverride !== null);
-        if($this->experimentalGameplayOverride !== null){
+        if ($this->experimentalGameplayOverride !== null) {
             $this->putBool($this->experimentalGameplayOverride);
         }
 
@@ -228,19 +232,19 @@ class StartGamePacket428 extends StartGamePacket{
 
         $this->putUnsignedVarInt(count($this->blockPalette));
         $nbtWriter = new NetworkLittleEndianNBTStream();
-        foreach($this->blockPalette as $entry){
+        foreach ($this->blockPalette as $entry) {
             $this->putString($entry->getName());
-            $this->put($nbtWriter->write($entry->getStates()));
+            ($this->buffer .= $nbtWriter->write($entry->getStates()));
         }
+
         $this->putUnsignedVarInt(count($this->itemTable));
         foreach($this->itemTable as $entry){
             $this->putString($entry->getStringId());
-            $this->putLShort($entry->getNumericId());
-            $this->putBool($entry->isComponentBased());
+            ($this->buffer .= (\pack("v", $entry->getNumericId())));
+            ($this->buffer .= ($entry->isComponentBased() ? "\x01" : "\x00"));
         }
 
         $this->putString($this->multiplayerCorrelationId);
         $this->putBool($this->enableNewInventorySystem);
     }
-
 }

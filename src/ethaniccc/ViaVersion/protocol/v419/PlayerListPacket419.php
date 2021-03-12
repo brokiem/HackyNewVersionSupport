@@ -1,21 +1,22 @@
 <?php
 
-namespace ethaniccc\ViaVersion\hacks\v428;
+namespace ethaniccc\ViaVersion\protocol\v419;
 
 use pocketmine\network\mcpe\protocol\PlayerListPacket;
 use pocketmine\network\mcpe\protocol\types\PlayerListEntry;
 use pocketmine\network\mcpe\protocol\types\SkinData;
 use pocketmine\network\mcpe\protocol\types\SkinImage;
 
-class PlayerListPacket428 extends PlayerListPacket{
+class PlayerListPacket419 extends PlayerListPacket
+{
 
-    public function putSkin(SkinData $skin){
+    public function putSkin(SkinData $skin)
+    {
         $this->putString($skin->getSkinId());
-        $this->putString($skin->getFabID());
         $this->putString($skin->getResourcePatch());
         $this->putSkinImage($skin->getSkinImage());
         $this->putLInt(count($skin->getAnimations()));
-        foreach($skin->getAnimations() as $animation){
+        foreach ($skin->getAnimations() as $animation) {
             $this->putSkinImage($animation->getImage());
             $this->putLInt($animation->getType());
             $this->putLFloat($animation->getFrames());
@@ -31,7 +32,7 @@ class PlayerListPacket428 extends PlayerListPacket{
         $this->putString($skin->getArmSize());
         $this->putString($skin->getSkinColor());
         $this->putLInt(count($skin->getPersonaPieces()));
-        foreach($skin->getPersonaPieces() as $piece){
+        foreach ($skin->getPersonaPieces() as $piece) {
             $this->putString($piece->getPieceId());
             $this->putString($piece->getPieceType());
             $this->putString($piece->getPackId());
@@ -39,28 +40,30 @@ class PlayerListPacket428 extends PlayerListPacket{
             $this->putString($piece->getProductId());
         }
         $this->putLInt(count($skin->getPieceTintColors()));
-        foreach($skin->getPieceTintColors() as $tint){
+        foreach ($skin->getPieceTintColors() as $tint) {
             $this->putString($tint->getPieceType());
             $this->putLInt(count($tint->getColors()));
-            foreach($tint->getColors() as $color){
+            foreach ($tint->getColors() as $color) {
                 $this->putString($color);
             }
         }
     }
 
-    private function putSkinImage(SkinImage $image) : void{
+    private function putSkinImage(SkinImage $image): void
+    {
         $this->putLInt($image->getWidth());
         $this->putLInt($image->getHeight());
         $this->putString($image->getData());
     }
 
-    protected function decodePayload(){
+    protected function decodePayload()
+    {
         $this->type = $this->getByte();
         $count = $this->getUnsignedVarInt();
-        for($i = 0; $i < $count; ++$i){
+        for ($i = 0; $i < $count; ++$i) {
             $entry = new PlayerListEntry();
 
-            if($this->type === self::TYPE_ADD){
+            if ($this->type === self::TYPE_ADD) {
                 $entry->uuid = $this->getUUID();
                 $entry->entityUniqueId = $this->getEntityUniqueId();
                 $entry->username = $this->getString();
@@ -70,24 +73,25 @@ class PlayerListPacket428 extends PlayerListPacket{
                 $entry->skinData = $this->getSkin();
                 $entry->isTeacher = $this->getBool();
                 $entry->isHost = $this->getBool();
-            }else{
+            } else {
                 $entry->uuid = $this->getUUID();
             }
 
             $this->entries[$i] = $entry;
         }
-        if($this->type === self::TYPE_ADD){
-            for($i = 0; $i < $count; ++$i){
+        if ($this->type === self::TYPE_ADD) {
+            for ($i = 0; $i < $count; ++$i) {
                 $this->entries[$i]->skinData->setVerified($this->getBool());
             }
         }
     }
 
-    protected function encodePayload(){
+    protected function encodePayload()
+    {
         $this->putByte($this->type);
         $this->putUnsignedVarInt(count($this->entries));
-        foreach($this->entries as $entry){
-            if($this->type === self::TYPE_ADD){
+        foreach ($this->entries as $entry) {
+            if ($this->type === self::TYPE_ADD) {
                 $this->putUUID($entry->uuid);
                 $this->putEntityUniqueId($entry->entityUniqueId);
                 $this->putString($entry->username);
@@ -97,15 +101,14 @@ class PlayerListPacket428 extends PlayerListPacket{
                 $this->putSkin($entry->skinData);
                 $this->putBool($entry->isTeacher);
                 $this->putBool($entry->isHost);
-            }else{
+            } else {
                 $this->putUUID($entry->uuid);
             }
         }
-        if($this->type === self::TYPE_ADD){
-            foreach($this->entries as $entry){
+        if ($this->type === self::TYPE_ADD) {
+            foreach ($this->entries as $entry) {
                 $this->putBool($entry->skinData->isVerified());
             }
         }
     }
-
 }
